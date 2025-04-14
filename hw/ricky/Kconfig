@@ -1,0 +1,2 @@
+config RICKY_BOARD
+    bool
