@@ -10,6 +10,7 @@ ricky_ss.add(files('../arm/omap1.c'))
 
 ricky_ss.add(when: 'CONFIG_RICKY_BOARD', if_true: files(
                         'ricky_board.c',
+                        'ricky_soc.c',
                   ))
 
 hw_arch += {'arm': ricky_ss}
