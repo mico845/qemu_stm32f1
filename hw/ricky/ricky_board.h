@@ -3,7 +3,7 @@
 
 #include "ricky_soc.h"
 
-#define TYPE_RICKY_BOARD MACHINE_TYPE_NAME("ricky")
+#define TYPE_RICKY_BOARD MACHINE_TYPE_NAME("RickyBoard")
 typedef struct RickyBoardState RickyBoardState;
 #define RICKY_BOARD(obj) \
 OBJECT_CHECK(RickyBoardState, (obj), TYPE_RICKY_BOARD)

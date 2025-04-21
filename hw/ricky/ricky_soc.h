@@ -6,10 +6,14 @@
 #include "qom/object.h"
 #include "hw/arm/armv7m.h"
 
-#define TYPE_RICKY_SOC "ricky-soc"
+#include "ricky_soc_uasrt.h"
+
+#define TYPE_RICKY_SOC "RickyBoard-soc"
 typedef struct RickySocState RickySocState;
 #define RICKY_SOC(obj) \
 OBJECT_CHECK(RickySocState, (obj), TYPE_RICKY_SOC)
+
+#define RICKY_SOC_USART_NUM 1
 
 struct RickySocState {
     /*< private >*/
@@ -21,6 +25,8 @@ struct RickySocState {
     MemoryRegion sram;
     MemoryRegion flash;
     MemoryRegion boot_alias;
+
+    RickySocUsartState usart[RICKY_SOC_USART_NUM];
 
     Clock *sysclk;
     Clock *refclk;

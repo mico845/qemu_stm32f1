@@ -13,8 +13,6 @@
 
 static void ricky_board_init(MachineState *machine)
 {
-    qemu_log("ricky board_init\r\n");
-
     Clock *sysclk;
     RickyBoardState *board = RICKY_BOARD(machine);
     sysclk = clock_new(OBJECT(machine), "SYSCLK");
@@ -27,7 +25,7 @@ static void ricky_board_init(MachineState *machine)
 
     armv7m_load_kernel(board->soc.armv7m.cpu,
                        machine->kernel_filename,
-                       0, FLASH_SIZE);
+                       0x00, FLASH_SIZE);
 }
 
 static void ricky_board_class_init(ObjectClass *oc, void *data)

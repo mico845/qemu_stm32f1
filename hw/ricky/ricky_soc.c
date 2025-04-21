@@ -1,12 +1,14 @@
 #include "qemu/osdep.h"
 #include "qapi/error.h"
 #include "qemu/module.h"
+#include "system/system.h"
 #include "qemu/log-for-trace.h"
 #include "exec/address-spaces.h"
 #include "hw/misc/unimp.h"
 #include "hw/qdev-clock.h"
 
 #include "ricky_board.h"
+
 
 static const MemMapEntry base_memmap[] = {
         [RICKY_MEM_BOOT]            =   { 0x00000000,   0x8000000 },
@@ -53,13 +55,28 @@ static const MemMapEntry base_memmap[] = {
         [RICKY_MEM_CRC]             =   { 0x40023000,       0x400 },
 };
 
+static const hwaddr usart_addr[RICKY_SOC_USART_NUM] = { base_memmap[RICKY_MEM_USART1].base};
+static const int usart_irq[RICKY_SOC_USART_NUM] = {37};
+
+static void ricky_soc_initfn(Object *obj)
+{
+    RickySocState *s = RICKY_SOC(obj);
+    int i;
+    object_initialize_child(obj, "armv7m", &s->armv7m, TYPE_ARMV7M);
+    for (i = 0; i < RICKY_SOC_USART_NUM; i++) {
+        ricky_soc_usart_initialize_child(obj, &s->usart[i]);
+    }
+
+    s->sysclk = qdev_init_clock_in(DEVICE(s), "sysclk", NULL, NULL, 0);
+    s->refclk = qdev_init_clock_in(DEVICE(s), "refclk", NULL, NULL, 0);
+}
 
 static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
 {
-    qemu_log("ricky soc_realize\r\n");
     DeviceState *armv7m;
     RickySocState *s = RICKY_SOC(dev_soc);
     MemoryRegion *system_memory = get_system_memory();
+    int i;
 
     if (clock_has_source(s->refclk)) {
         error_setg(errp, "refclk clock must not be wired up by the board code");
@@ -92,7 +109,7 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
 
     // Aliased to flash or system memory depending on BOOT pins
     memory_region_init_alias(&s->boot_alias, OBJECT(dev_soc),
-                             "ricky-soc.boot", &s->flash, base_memmap[RICKY_MEM_BOOT].base, base_memmap[RICKY_MEM_FLASH].size);
+                             "ricky-soc.boot", &s->flash, 0, base_memmap[RICKY_MEM_FLASH].size);
     memory_region_add_subregion(system_memory, base_memmap[RICKY_MEM_BOOT].base, &s->boot_alias);
 
     armv7m = DEVICE(&s->armv7m);
@@ -108,25 +125,48 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
         return;
     }
 
-    create_unimplemented_device("timer[2]",  base_memmap[RICKY_MEM_TIM2].base, base_memmap[RICKY_MEM_TIM2].size);
+    for (i = 0; i < RICKY_SOC_USART_NUM; i++) {
+        ricky_soc_usart_create(&(s->usart[i]), i, qdev_get_gpio_in(armv7m, usart_irq[i]), usart_addr[i], errp);
+    }
 
-}
 
-static void ricky_soc_initfn(Object *obj)
-{
-    qemu_log("ricky soc_instance_init\r\n");
-
-    RickySocState *s = RICKY_SOC(obj);
-    object_initialize_child(obj, "armv7m", &s->armv7m, TYPE_ARMV7M);
-
-    s->sysclk = qdev_init_clock_in(DEVICE(s), "sysclk", NULL, NULL, 0);
-    s->refclk = qdev_init_clock_in(DEVICE(s), "refclk", NULL, NULL, 0);
+    create_unimplemented_device("timer[2]",          base_memmap[RICKY_MEM_TIM2].base,            base_memmap[RICKY_MEM_TIM2].size);
+    create_unimplemented_device("timer[3]",          base_memmap[RICKY_MEM_TIM3].base,            base_memmap[RICKY_MEM_TIM3].size);
+    create_unimplemented_device("timer[4]",          base_memmap[RICKY_MEM_TIM4].base,            base_memmap[RICKY_MEM_TIM4].size);
+    create_unimplemented_device("rtc",               base_memmap[RICKY_MEM_RTC].base,             base_memmap[RICKY_MEM_RTC].size);
+    create_unimplemented_device("wwdg",              base_memmap[RICKY_MEM_WWDG].base,            base_memmap[RICKY_MEM_WWDG].size);
+    create_unimplemented_device("iwdg",              base_memmap[RICKY_MEM_IWDG].base,            base_memmap[RICKY_MEM_IWDG].size);
+    create_unimplemented_device("spi[2]",            base_memmap[RICKY_MEM_SPI2].base,            base_memmap[RICKY_MEM_SPI2].size);
+ //   create_unimplemented_device("usart[2]",          base_memmap[RICKY_MEM_USART2].base,          base_memmap[RICKY_MEM_USART2].size);
+ //   create_unimplemented_device("usart[3]",          base_memmap[RICKY_MEM_USART3].base,          base_memmap[RICKY_MEM_USART3].size);
+    create_unimplemented_device("i2c[1]",            base_memmap[RICKY_MEM_I2C1].base,            base_memmap[RICKY_MEM_I2C1].size);
+    create_unimplemented_device("i2c[2]",            base_memmap[RICKY_MEM_I2C2].base,            base_memmap[RICKY_MEM_I2C2].size);
+    create_unimplemented_device("usb",               base_memmap[RICKY_MEM_USB].base,             base_memmap[RICKY_MEM_USB].size);
+    create_unimplemented_device("usb-can-sram",      base_memmap[RICKY_MEM_USB_CAN_SRAM].base,    base_memmap[RICKY_MEM_USB_CAN_SRAM].size);
+    create_unimplemented_device("bxcan",             base_memmap[RICKY_MEM_BXCAN].base,           base_memmap[RICKY_MEM_BXCAN].size);
+    create_unimplemented_device("bkp",               base_memmap[RICKY_MEM_BKP].base,             base_memmap[RICKY_MEM_BKP].size);
+    create_unimplemented_device("pwr",               base_memmap[RICKY_MEM_PWR].base,             base_memmap[RICKY_MEM_PWR].size);
+    create_unimplemented_device("afio",              base_memmap[RICKY_MEM_AFIO].base,            base_memmap[RICKY_MEM_AFIO].size);
+    create_unimplemented_device("exti",              base_memmap[RICKY_MEM_EXTI].base,            base_memmap[RICKY_MEM_EXTI].size);
+    create_unimplemented_device("gpio[a]",           base_memmap[RICKY_MEM_GPIOA].base,           base_memmap[RICKY_MEM_GPIOA].size);
+    create_unimplemented_device("gpio[b]",           base_memmap[RICKY_MEM_GPIOB].base,           base_memmap[RICKY_MEM_GPIOB].size);
+    create_unimplemented_device("gpio[c]",           base_memmap[RICKY_MEM_GPIOC].base,           base_memmap[RICKY_MEM_GPIOC].size);
+    create_unimplemented_device("gpio[d]",           base_memmap[RICKY_MEM_GPIOD].base,           base_memmap[RICKY_MEM_GPIOD].size);
+    create_unimplemented_device("gpio[e]",           base_memmap[RICKY_MEM_GPIOE].base,           base_memmap[RICKY_MEM_GPIOE].size);
+    create_unimplemented_device("adc[1]",            base_memmap[RICKY_MEM_ADC1].base,            base_memmap[RICKY_MEM_ADC1].size);
+    create_unimplemented_device("adc[2]",            base_memmap[RICKY_MEM_ADC2].base,            base_memmap[RICKY_MEM_ADC2].size);
+    create_unimplemented_device("timer[1]",          base_memmap[RICKY_MEM_TIM1].base,            base_memmap[RICKY_MEM_TIM1].size);
+    create_unimplemented_device("spi[1]",            base_memmap[RICKY_MEM_SPI1].base,            base_memmap[RICKY_MEM_SPI1].size);
+   // create_unimplemented_device("usart[1]",          base_memmap[RICKY_MEM_USART1].base,          base_memmap[RICKY_MEM_USART1].size);
+    create_unimplemented_device("dma",               base_memmap[RICKY_MEM_DMA].base,             base_memmap[RICKY_MEM_DMA].size);
+    create_unimplemented_device("rcc",               base_memmap[RICKY_MEM_RCC].base,             base_memmap[RICKY_MEM_RCC].size);
+    create_unimplemented_device("flash-int",         base_memmap[RICKY_MEM_FLASH_INT].base,       base_memmap[RICKY_MEM_FLASH_INT].size);
+    create_unimplemented_device("crc",               base_memmap[RICKY_MEM_CRC].base,             base_memmap[RICKY_MEM_CRC].size);
 }
 
 
 static void ricky_soc_class_init(ObjectClass *klass, void *data)
 {
-    qemu_log("ricky soc_class_init\r\n");
     DeviceClass *dc = DEVICE_CLASS(klass);
     dc->realize = ricky_soc_realize;
 }
