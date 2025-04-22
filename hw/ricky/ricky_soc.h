@@ -6,6 +6,8 @@
 #include "qom/object.h"
 #include "hw/arm/armv7m.h"
 
+
+#include "hw/ssi/stm32f2xx_spi.h"
 #include "ricky_soc_uasrt.h"
 
 #define TYPE_RICKY_SOC "RickyBoard-soc"
@@ -13,7 +15,8 @@ typedef struct RickySocState RickySocState;
 #define RICKY_SOC(obj) \
 OBJECT_CHECK(RickySocState, (obj), TYPE_RICKY_SOC)
 
-#define RICKY_SOC_USART_NUM 1
+#define RICKY_SOC_USART_NUM 3
+#define RICKY_SOC_SPI_NUM 2
 
 struct RickySocState {
     /*< private >*/
@@ -27,6 +30,7 @@ struct RickySocState {
     MemoryRegion boot_alias;
 
     RickySocUsartState usart[RICKY_SOC_USART_NUM];
+    STM32F2XXSPIState spi[RICKY_SOC_SPI_NUM];
 
     Clock *sysclk;
     Clock *refclk;

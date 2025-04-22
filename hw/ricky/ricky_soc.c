@@ -55,16 +55,27 @@ static const MemMapEntry base_memmap[] = {
         [RICKY_MEM_CRC]             =   { 0x40023000,       0x400 },
 };
 
-static const hwaddr usart_addr[RICKY_SOC_USART_NUM] = { base_memmap[RICKY_MEM_USART1].base};
-static const int usart_irq[RICKY_SOC_USART_NUM] = {37};
+static const hwaddr usart_addr[RICKY_SOC_USART_NUM] = { base_memmap[RICKY_MEM_USART1].base, base_memmap[RICKY_MEM_USART2].base, base_memmap[RICKY_MEM_USART3].base};
+static const int usart_irq[RICKY_SOC_USART_NUM] = {37, 38, 39};
+
+static const uint32_t spi_addr[RICKY_SOC_SPI_NUM] = { 0x40013000, 0x40003800 };
+static const int spi_irq[RICKY_SOC_SPI_NUM] = {35, 36};
 
 static void ricky_soc_initfn(Object *obj)
 {
     RickySocState *s = RICKY_SOC(obj);
     int i;
+
     object_initialize_child(obj, "armv7m", &s->armv7m, TYPE_ARMV7M);
+
+    // initialize USARTs
     for (i = 0; i < RICKY_SOC_USART_NUM; i++) {
         ricky_soc_usart_initialize_child(obj, &s->usart[i]);
+    }
+
+    // initialize SPIs
+    for (i = 0; i < RICKY_SOC_SPI_NUM; i++) {
+        object_initialize_child(obj, "spi[*]", &s->spi[i], TYPE_STM32F2XX_SPI);
     }
 
     s->sysclk = qdev_init_clock_in(DEVICE(s), "sysclk", NULL, NULL, 0);
@@ -73,6 +84,9 @@ static void ricky_soc_initfn(Object *obj)
 
 static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
 {
+    DeviceState *dev;
+    SysBusDevice *busdev;
+
     DeviceState *armv7m;
     RickySocState *s = RICKY_SOC(dev_soc);
     MemoryRegion *system_memory = get_system_memory();
@@ -125,10 +139,22 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
         return;
     }
 
+    /* USART */
     for (i = 0; i < RICKY_SOC_USART_NUM; i++) {
         ricky_soc_usart_create(&(s->usart[i]), i, qdev_get_gpio_in(armv7m, usart_irq[i]), usart_addr[i], errp);
     }
 
+
+    /* SPI */
+    for (i = 0; i < RICKY_SOC_SPI_NUM; i++) {
+        dev = DEVICE(&(s->spi[i]));
+        if (!sysbus_realize(SYS_BUS_DEVICE(&s->spi[i]), errp)) {
+            return;
+        }
+        busdev = SYS_BUS_DEVICE(dev);
+        sysbus_mmio_map(busdev, 0, spi_addr[i]);
+        sysbus_connect_irq(busdev, 0, qdev_get_gpio_in(armv7m, spi_irq[i]));
+    }
 
     create_unimplemented_device("timer[2]",          base_memmap[RICKY_MEM_TIM2].base,            base_memmap[RICKY_MEM_TIM2].size);
     create_unimplemented_device("timer[3]",          base_memmap[RICKY_MEM_TIM3].base,            base_memmap[RICKY_MEM_TIM3].size);
@@ -136,7 +162,7 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
     create_unimplemented_device("rtc",               base_memmap[RICKY_MEM_RTC].base,             base_memmap[RICKY_MEM_RTC].size);
     create_unimplemented_device("wwdg",              base_memmap[RICKY_MEM_WWDG].base,            base_memmap[RICKY_MEM_WWDG].size);
     create_unimplemented_device("iwdg",              base_memmap[RICKY_MEM_IWDG].base,            base_memmap[RICKY_MEM_IWDG].size);
-    create_unimplemented_device("spi[2]",            base_memmap[RICKY_MEM_SPI2].base,            base_memmap[RICKY_MEM_SPI2].size);
+ //   create_unimplemented_device("spi[2]",            base_memmap[RICKY_MEM_SPI2].base,            base_memmap[RICKY_MEM_SPI2].size);
  //   create_unimplemented_device("usart[2]",          base_memmap[RICKY_MEM_USART2].base,          base_memmap[RICKY_MEM_USART2].size);
  //   create_unimplemented_device("usart[3]",          base_memmap[RICKY_MEM_USART3].base,          base_memmap[RICKY_MEM_USART3].size);
     create_unimplemented_device("i2c[1]",            base_memmap[RICKY_MEM_I2C1].base,            base_memmap[RICKY_MEM_I2C1].size);
@@ -156,7 +182,7 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
     create_unimplemented_device("adc[1]",            base_memmap[RICKY_MEM_ADC1].base,            base_memmap[RICKY_MEM_ADC1].size);
     create_unimplemented_device("adc[2]",            base_memmap[RICKY_MEM_ADC2].base,            base_memmap[RICKY_MEM_ADC2].size);
     create_unimplemented_device("timer[1]",          base_memmap[RICKY_MEM_TIM1].base,            base_memmap[RICKY_MEM_TIM1].size);
-    create_unimplemented_device("spi[1]",            base_memmap[RICKY_MEM_SPI1].base,            base_memmap[RICKY_MEM_SPI1].size);
+ //   create_unimplemented_device("spi[1]",            base_memmap[RICKY_MEM_SPI1].base,            base_memmap[RICKY_MEM_SPI1].size);
    // create_unimplemented_device("usart[1]",          base_memmap[RICKY_MEM_USART1].base,          base_memmap[RICKY_MEM_USART1].size);
     create_unimplemented_device("dma",               base_memmap[RICKY_MEM_DMA].base,             base_memmap[RICKY_MEM_DMA].size);
     create_unimplemented_device("rcc",               base_memmap[RICKY_MEM_RCC].base,             base_memmap[RICKY_MEM_RCC].size);
