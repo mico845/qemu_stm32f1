@@ -21,6 +21,25 @@
 
 #define USART_SR_RESET (USART_SR_TXE | USART_SR_TC)
 
+#define USART_CR1_UE     (1 << 13)
+#define USART_CR1_TXEIE  (1 << 7)
+#define USART_CR1_TCEIE  (1 << 6)
+#define USART_CR1_RXNEIE (1 << 5)
+#define USART_CR1_TE     (1 << 3)
+#define USART_CR1_RE     (1 << 2)
+
+
+static void ricky_soc_usart_update_irq(RickySocUsartState *s)
+{
+    uint32_t mask = s->usart_sr & s->usart_cr1;
+
+    if (mask & (USART_SR_TXE | USART_SR_TC | USART_SR_RXNE)) {
+        qemu_set_irq(s->irq, 1);
+    } else {
+        qemu_set_irq(s->irq, 0);
+    }
+}
+
 static int ricky_soc_usart_can_receive(void *opaque)
 {
     RickySocUsartState *s = RICKY_SOC_USART(opaque);
@@ -34,20 +53,17 @@ static int ricky_soc_usart_can_receive(void *opaque)
 
 static void ricky_soc_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    //   RickySocUsartState *s = RICKY_SOC_USART(opaque);
-    //    DeviceState *d = DEVICE(s);
-}
+    RickySocUsartState *s = RICKY_SOC_USART(opaque);
 
-
-static void ricky_soc_usart_update_irq(RickySocUsartState *s)
-{
-    uint32_t mask = s->usart_sr & s->usart_cr1;
-
-    if (mask & (USART_SR_TXE | USART_SR_TC | USART_SR_RXNE)) {
-        qemu_set_irq(s->irq, 1);
-    } else {
-        qemu_set_irq(s->irq, 0);
+    if (!(s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_RE)) {
+        /* USART not enabled - drop the chars */
+        return;
     }
+
+    s->usart_dr = *buf;
+    s->usart_sr |= USART_SR_RXNE;
+
+    ricky_soc_usart_update_irq(s);
 }
 
 static void ricky_soc_usart_reset(DeviceState *dev)
@@ -224,20 +240,25 @@ void ricky_soc_usart_initialize_child(Object *obj, RickySocUsartState *usart)
                             TYPE_RICKY_SOC_USART);
 }
 
-
+#define CHARDEV_OUTPUT_FILE 0
 void ricky_soc_usart_create(RickySocUsartState *usart, int serial_id, qemu_irq irq, hwaddr base, Error **errp)
 {
     DeviceState *dev;
     SysBusDevice *busdev;
+#if CHARDEV_OUTPUT_FILE
     char filename[64];
     snprintf(filename, sizeof(filename), "file:output/uart%d.log", serial_id);
     char chardevname[64];
     snprintf(chardevname, sizeof(chardevname), "ricky_usart_chr%d", serial_id);
     Chardev *chardev = qemu_chr_new(chardevname, filename, NULL);
-
+#endif
     dev = DEVICE(usart);
-    // qdev_prop_set_chr(dev, "chardev", serial_hd(serial_id));
+
+#if CHARDEV_OUTPUT_FILE
     qdev_prop_set_chr(dev, "chardev", chardev);
+#else
+    qdev_prop_set_chr(dev, "chardev", serial_hd(serial_id));
+#endif
     if (!sysbus_realize(SYS_BUS_DEVICE(usart), errp)) {
         return;
     }
