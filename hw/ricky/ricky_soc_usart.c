@@ -29,8 +29,6 @@ static int ricky_soc_usart_can_receive(void *opaque)
         return 1;
     }
 
-
-
     return 0;
 }
 
@@ -38,7 +36,6 @@ static void ricky_soc_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
     //   RickySocUsartState *s = RICKY_SOC_USART(opaque);
     //    DeviceState *d = DEVICE(s);
-
 }
 
 
@@ -227,13 +224,20 @@ void ricky_soc_usart_initialize_child(Object *obj, RickySocUsartState *usart)
                             TYPE_RICKY_SOC_USART);
 }
 
+
 void ricky_soc_usart_create(RickySocUsartState *usart, int serial_id, qemu_irq irq, hwaddr base, Error **errp)
 {
     DeviceState *dev;
     SysBusDevice *busdev;
+    char filename[64];
+    snprintf(filename, sizeof(filename), "file:output/uart%d.log", serial_id);
+    char chardevname[64];
+    snprintf(chardevname, sizeof(chardevname), "ricky_usart_chr%d", serial_id);
+    Chardev *chardev = qemu_chr_new(chardevname, filename, NULL);
 
     dev = DEVICE(usart);
-    qdev_prop_set_chr(dev, "chardev", serial_hd(serial_id));
+    // qdev_prop_set_chr(dev, "chardev", serial_hd(serial_id));
+    qdev_prop_set_chr(dev, "chardev", chardev);
     if (!sysbus_realize(SYS_BUS_DEVICE(usart), errp)) {
         return;
     }
