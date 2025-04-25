@@ -1168,6 +1168,9 @@ static void arm_wfxt_timer_cb(void *opaque)
 }
 #endif
 
+
+extern int print_insn_arm (bfd_vma pc, struct disassemble_info *info);
+
 static void arm_disas_set_info(CPUState *cpu, disassemble_info *info)
 {
     ARMCPU *ac = ARM_CPU(cpu);
@@ -1189,6 +1192,9 @@ static void arm_disas_set_info(CPUState *cpu, disassemble_info *info)
             info->cap_insn_split = 4;
             cap_mode = CS_MODE_ARM;
         }
+
+        info->print_insn = print_insn_arm;
+
         if (arm_feature(env, ARM_FEATURE_V8)) {
             cap_mode |= CS_MODE_V8;
         }

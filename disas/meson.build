@@ -9,6 +9,10 @@ common_ss.add(when: 'CONFIG_RISCV_DIS', if_true: files(
     'riscv-xthead.c',
     'riscv-xventana.c'
 ))
+common_ss.add(when: 'CONFIG_ARM_DIS', if_true: files(
+                  'arm.c'
+              ))
+
 common_ss.add(when: 'CONFIG_SH4_DIS', if_true: files('sh4.c'))
 common_ss.add(when: 'CONFIG_SPARC_DIS', if_true: files('sparc.c'))
 common_ss.add(when: 'CONFIG_XTENSA_DIS', if_true: files('xtensa.c'))
