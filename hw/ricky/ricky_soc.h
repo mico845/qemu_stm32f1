@@ -7,7 +7,7 @@
 #include "hw/arm/armv7m.h"
 
 
-#include "hw/ssi/stm32f2xx_spi.h"
+#include "ricky_soc_spi.h"
 #include "ricky_soc_uasrt.h"
 
 #define TYPE_RICKY_SOC "RickyBoard-soc"
@@ -30,7 +30,7 @@ struct RickySocState {
     MemoryRegion boot_alias;
 
     RickySocUsartState usart[RICKY_SOC_USART_NUM];
-    STM32F2XXSPIState spi[RICKY_SOC_SPI_NUM];
+    RickySocSpiState spi[RICKY_SOC_SPI_NUM];
 
     Clock *sysclk;
     Clock *refclk;

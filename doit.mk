@@ -1,5 +1,5 @@
 
-.PHONY: config build clear rebuild
+.PHONY: config build clear rebuild gdb
 
 ROOT=$(shell pwd)
 DEMO_PATH=E:\Project\STM32\F103CBT6\HelloWorld\cmake-build-debug-mingw-stm32\F103CBT6.elf
@@ -28,4 +28,12 @@ rebuild:
 	rm -rf /build/*
 	make -f doit.mk config
 	make -f doit.mk build
+
+gdb:
+	${ROOT}/build/qemu-system-ricky.exe \
+	-M RickyBoard \
+	-kernel ${DEMO_PATH} \
+	-monitor stdio \
+	-gdb tcp::1234 \
+	-S
 

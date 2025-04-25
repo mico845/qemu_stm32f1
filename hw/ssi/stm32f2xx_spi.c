@@ -27,6 +27,8 @@
 #include "qemu/module.h"
 #include "hw/ssi/stm32f2xx_spi.h"
 #include "migration/vmstate.h"
+#include "hw/irq.h"
+
 
 #ifndef STM_SPI_ERR_DEBUG
 #define STM_SPI_ERR_DEBUG 0
@@ -200,6 +202,8 @@ static void stm32f2xx_spi_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     s->ssi = ssi_create_bus(dev, "ssi");
+
+  //  qdev_init_gpio_out_named(DEVICE(dev), &s->cs, "cs", 1);
 }
 
 static void stm32f2xx_spi_class_init(ObjectClass *klass, void *data)

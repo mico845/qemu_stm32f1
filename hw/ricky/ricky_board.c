@@ -23,6 +23,8 @@ static void ricky_board_init(MachineState *machine)
 
     sysbus_realize_and_unref(SYS_BUS_DEVICE(&board->soc), &error_fatal);
 
+    board_spi_flash_m25p80_create(OBJECT(&board->soc.spi));
+
     armv7m_load_kernel(board->soc.armv7m.cpu,
                        machine->kernel_filename,
                        0x00, FLASH_SIZE);
@@ -53,3 +55,23 @@ static void ricky_board_init_register_types(void)
 }
 
 type_init(ricky_board_init_register_types)
+
+
+
+DeviceState *board_spi_flash_m25p80_create(Object *obj)
+{
+    RickySocSpiState *s = RICKY_SOC_SPI(obj);
+    DeviceState *dev = DEVICE(obj);
+    DeviceState *sdev;
+    SSIBus *spi = (SSIBus *)qdev_get_child_bus(dev, "ssi");
+
+    sdev = qdev_new("w25q64");
+    // sdev = qdev_new("n25q256a");
+
+    qdev_realize_and_unref(sdev, BUS(spi), &error_fatal);
+
+    s->irq_cs = qdev_get_gpio_in_named(sdev, SSI_GPIO_CS, 0);
+    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 1, s->irq_cs);
+
+    return sdev;
+}

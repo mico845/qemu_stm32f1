@@ -6,6 +6,7 @@
 #include "exec/address-spaces.h"
 #include "hw/misc/unimp.h"
 #include "hw/qdev-clock.h"
+#include "hw/ssi/ssi.h"
 
 #include "ricky_board.h"
 
@@ -16,7 +17,6 @@ static const MemMapEntry base_memmap[] = {
         [RICKY_MEM_SYSTEM_MEM]      =   { 0x1FFFF000,       0x800 },
         [RICKY_MEM_OPTION_BYTES]    =   { 0x1FFFF800,         0xF },
         [RICKY_MEM_SRAM]            =   { 0x20000000,     0x20000 }, // 8 *1024
-
 
         [RICKY_MEM_TIM2]            =   { 0x40000000,       0x400 },
         [RICKY_MEM_TIM3]            =   { 0x40000400,       0x400 },
@@ -75,7 +75,7 @@ static void ricky_soc_initfn(Object *obj)
 
     // initialize SPIs
     for (i = 0; i < RICKY_SOC_SPI_NUM; i++) {
-        object_initialize_child(obj, "spi[*]", &s->spi[i], TYPE_STM32F2XX_SPI);
+        ricky_soc_spi_initialize_child(obj, &s->spi[i]);
     }
 
     s->sysclk = qdev_init_clock_in(DEVICE(s), "sysclk", NULL, NULL, 0);
@@ -84,9 +84,6 @@ static void ricky_soc_initfn(Object *obj)
 
 static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
 {
-    DeviceState *dev;
-    SysBusDevice *busdev;
-
     DeviceState *armv7m;
     RickySocState *s = RICKY_SOC(dev_soc);
     MemoryRegion *system_memory = get_system_memory();
@@ -144,16 +141,9 @@ static void ricky_soc_realize(DeviceState *dev_soc, Error **errp)
         ricky_soc_usart_create(&(s->usart[i]), i, qdev_get_gpio_in(armv7m, usart_irq[i]), usart_addr[i], errp);
     }
 
-
     /* SPI */
     for (i = 0; i < RICKY_SOC_SPI_NUM; i++) {
-        dev = DEVICE(&(s->spi[i]));
-        if (!sysbus_realize(SYS_BUS_DEVICE(&s->spi[i]), errp)) {
-            return;
-        }
-        busdev = SYS_BUS_DEVICE(dev);
-        sysbus_mmio_map(busdev, 0, spi_addr[i]);
-        sysbus_connect_irq(busdev, 0, qdev_get_gpio_in(armv7m, spi_irq[i]));
+        ricky_soc_spi_create(&(s->spi[i]), qdev_get_gpio_in(armv7m, spi_irq[i]), spi_addr[i], errp);
     }
 
     create_unimplemented_device("timer[2]",          base_memmap[RICKY_MEM_TIM2].base,            base_memmap[RICKY_MEM_TIM2].size);

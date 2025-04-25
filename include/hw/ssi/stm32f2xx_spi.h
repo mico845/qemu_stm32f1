@@ -66,6 +66,7 @@ struct STM32F2XXSPIState {
 
     qemu_irq irq;
     SSIBus *ssi;
+    qemu_irq cs;
 };
 
 #endif /* HW_STM32F2XX_SPI_H */

@@ -18,4 +18,7 @@ struct RickyBoardState {
     RickySocState soc;
 };
 
+DeviceState *board_spi_flash_m25p80_create(Object *obj);
+
+
 #endif //QEMU_RICKY_BOARD_H
